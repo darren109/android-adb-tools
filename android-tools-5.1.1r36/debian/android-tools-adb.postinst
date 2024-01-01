@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -e
+
+# Old udev rules were marking all /dev entries as "uaccess" meaning
+# that the current active user could write to any entry.
+# A reboot is required to make sure all the permissions are set to
+# a sane value again.
+if dpkg --compare-versions "$2" lt 4.2.2+git20130218-3ubuntu15 && \
+    [ -x /usr/share/update-notifier/notify-reboot-required ]
+then
+    /usr/share/update-notifier/notify-reboot-required || :
+fi
+
+# BQ and Meizu device ids are not compiled into default adb client
+# make sure we have them configured
+DEVICE_IDS="
+0x2a47
+0x2a45"
+
+ADB_USB="$HOME/.android/adb_usb.ini"
+if [ -f $ADB_USB ];then
+    for ID in $DEVICE_IDS
+    do
+        if [ -z $(grep $ID $ADB_USB) ]; then
+            echo "$ID" >> $ADB_USB
+        fi
+    done
+else
+    # just create new file
+    mkdir -p $HOME/.android/
+    echo "# ANDROID 3RD PARTY USB VENDOR ID LIST -- DO NOT EDIT.\n# USE 'android update adb' TO GENERATE.\n# 1 USB VENDOR ID PER LINE." > $ADB_USB
+    echo "$DEVICE_IDS" >> $ADB_USB
+fi
+
+#DEBHELPER#
+
+exit 0
